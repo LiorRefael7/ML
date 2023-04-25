@@ -131,8 +131,8 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
 
     if gain_ratio:
         for val_count, unique_val in zip(val_counts, unique_vals):
-            feature_subset = data[:, feature] == unique_val
-            groups[unique_val] = data[feature_subset, :]
+            feature_subset = data[:, feature] == unique_val # RETURNS THE SUBSET OF THE FEATURE WITH DESIRED ATTRIBUTE VALUE
+            groups[unique_val] = data[feature_subset, :] # RETURNS THE SUBSET OF THE DATA WITH THE ATTRIBUTE VALUE
             proportion = val_count / num_of_instances
             goodness += proportion * calc_entropy(data[feature_subset, :])
             split_info += -1 * proportion * np.log2(proportion)
@@ -173,13 +173,14 @@ class DecisionNode:
         - pred: the prediction of the node
         """
         pred = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+
+        if self.data.shape[0] == 0:
+            return pred
+
+        labels = self.data[:, -1]
+        unique_vals, val_counts = np.unique(labels, return_counts=True)
+        pred = unique_vals[np.argmax(val_counts)] # RETURNS THE MOST FREQUENT LABEL
+
         return pred
         
     def add_child(self, node, val):
@@ -203,13 +204,40 @@ class DecisionNode:
 
         This function has no return value
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        if self.depth < self.max_depth:
+            goodness_of_feature = []
+            for i in range(self.data.shape[1]):
+                goodness = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)
+                goodness_of_feature.append(goodness)
+
+            above_chi = False
+            while not above_chi:
+                index_of_max_goodness = np.argmax(goodness_of_feature)
+                chi_square_val = self.calc_chi(index_of_max_goodness)
+                if chi_square_val >= chi_table[[self.chi][0.05]]:
+                    above_chi = True
+                else:
+                    goodness_of_feature.pop(index_of_max_goodness)
+
+    def calc_chi(self, feature):
+        feature_col = self.data[:, feature:feature + 1]
+        unique_vals_feature, val_counts_feature = np.unique(feature_col, return_counts=True)
+        data_size = self.data.shape[0]
+        p_proportion = np.count_nonzero(self.data[:,-1] == 'p') / data_size
+        e_proportion = np.count_nonzero(self.data[:, -1] == 'e') / data_size
+        chi_value = 0
+        for val_count_feature, unique_val_feature in zip(val_counts_feature, unique_vals_feature):
+            feature_subset = self.data[:, feature] == unique_val_feature
+            data_subset = self.data[feature_subset, :]
+            num_of_p = np.count_nonzero(data_subset[:, -1] == 'p')
+            proportion_of_p = num_of_p * p_proportion
+            chi_value += ((num_of_p - proportion_of_p) ** 2) / proportion_of_p
+            num_of_e = np.count_nonzero(data_subset[:, -1] == 'e')
+            proportion_of_e = num_of_e * e_proportion
+            chi_value += ((num_of_e - proportion_of_e) ** 2) / proportion_of_e
+
+        return chi_value ** 2
+
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     """
