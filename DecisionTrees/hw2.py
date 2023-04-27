@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -78,11 +79,10 @@ def calc_gini(data):
     num_of_instances = data.shape[0]
     last_col = data[:, - 1]
     unique_vals, val_counts = np.unique(last_col, return_counts=True)
+    vals_probability = val_counts / num_of_instances
+    gini = 1 - np.sum(np.power(vals_probability, 2))
 
-    for val_count in val_counts:
-        gini += (val_count / num_of_instances) ** 2
-
-    return 1 - gini
+    return gini
 
 
 def calc_entropy(data):
@@ -99,10 +99,9 @@ def calc_entropy(data):
     num_of_instances = data.shape[0]
     last_col = data[:, - 1]
     unique_vals, val_counts = np.unique(last_col, return_counts=True)
-
-    for val_count in val_counts:
-        weight = val_count / num_of_instances
-        entropy += weight*np.log2(weight)
+    vals_probability = val_counts / num_of_instances
+    probability_logs = np.log2(vals_probability)
+    entropy = np.dot(vals_probability, probability_logs)
 
     return -entropy
 
@@ -127,25 +126,29 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     num_of_instances = data.shape[0]
     feature_col = data[:, feature:feature+1]
     unique_vals, val_counts = np.unique(feature_col, return_counts=True)
-    split_info = 0
 
+    vals_probability = val_counts / num_of_instances
+
+    for val_count, unique_val in zip(val_counts, unique_vals):
+        feature_subset = data[:, feature] == unique_val  # RETURNS THE SUBSET OF THE FEATURE WITH DESIRED ATTRIBUTE VALUE
+        groups[unique_val] = data[feature_subset, :]  # RETURNS THE SUBSET OF THE DATA WITH THE ATTRIBUTE VALUE
+
+    arr = []
     if gain_ratio:
-        for val_count, unique_val in zip(val_counts, unique_vals):
-            feature_subset = data[:, feature] == unique_val # RETURNS THE SUBSET OF THE FEATURE WITH DESIRED ATTRIBUTE VALUE
-            groups[unique_val] = data[feature_subset, :] # RETURNS THE SUBSET OF THE DATA WITH THE ATTRIBUTE VALUE
-            proportion = val_count / num_of_instances
-            goodness += proportion * calc_entropy(data[feature_subset, :])
-            split_info += -1 * proportion * np.log2(proportion)
-
-        goodness = (calc_entropy(data) - goodness) / split_info
+        vecotorized_goodness = np.vectorize(calc_entropy)
+        for key in groups.keys():
+            arr.append(groups.get(key))
+        print(arr)
+        info_gain = np.dot(vals_probability, vecotorized_goodness(arr))
+        probability_logs = np.log2(vals_probability)
+        split_info = -1 * np.dot(vals_probability, probability_logs)
+        goodness = info_gain / split_info
     else:
-        for val_count, unique_val in zip(val_counts, unique_vals):
-            feature_subset = data[:, feature] == unique_val
-            groups[unique_val] = data[feature_subset, :]
-            proportion = val_count / num_of_instances
-            goodness += proportion * impurity_func(data[feature_subset, :])
-
-        goodness = impurity_func(data) - goodness
+        vecotorized_goodness = np.vectorize(impurity_func)
+        for key in groups.keys():
+            arr.append(groups.get(key))
+        print(arr)
+        goodness = impurity_func(data) - np.dot(vals_probability, vecotorized_goodness(arr))
 
     return goodness, groups
 
@@ -179,7 +182,7 @@ class DecisionNode:
 
         labels = self.data[:, -1]
         unique_vals, val_counts = np.unique(labels, return_counts=True)
-        pred = unique_vals[np.argmax(val_counts)] # RETURNS THE MOST FREQUENT LABEL
+        pred = unique_vals[np.argmax(val_counts)]  # RETURNS THE MOST FREQUENT LABEL
 
         return pred
         
@@ -204,37 +207,49 @@ class DecisionNode:
 
         This function has no return value
         """
-        if self.depth < self.max_depth:
-            goodness_of_feature = []
-            for i in range(self.data.shape[1]):
-                goodness = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)
-                goodness_of_feature.append(goodness)
+        if self.terminal:
+            return
 
-            above_chi = False
-            while not above_chi:
-                index_of_max_goodness = np.argmax(goodness_of_feature)
-                chi_square_val = self.calc_chi(index_of_max_goodness)
-                if chi_square_val >= chi_table[[self.chi][0.05]]:
-                    above_chi = True
-                else:
-                    goodness_of_feature.pop(index_of_max_goodness)
+        if self.depth >= self.max_depth:
+            self.terminal = True
+            return
+
+        goodness_of_feature = []
+        for i in range(self.data.shape[1] - 1):
+            goodness = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)[0]
+            goodness_of_feature.append(goodness)
+
+        self.feature = goodness_of_feature.index(max(goodness_of_feature))
+        chi_square_val = self.calc_chi(self.feature)
+        if chi_square_val >= chi_table[self.chi][0.05]:
+            groups_of_feature = goodness_of_split(self.data, self.feature, impurity_func, self.gain_ratio)[1]
+            for key, value in groups_of_feature.items():
+                child_node = DecisionNode(data=value, depth=self.depth + 1, gain_ratio=self.gain_ratio)
+                self.add_child(child_node, key)
+                child_node.split(impurity_func)
+
+        # IF CHI VALUE IS LOWER THAT IN CHI TABLE --> PRUNE
+        else:
+            self.terminal = True
 
     def calc_chi(self, feature):
         feature_col = self.data[:, feature:feature + 1]
         unique_vals_feature, val_counts_feature = np.unique(feature_col, return_counts=True)
         data_size = self.data.shape[0]
-        p_proportion = np.count_nonzero(self.data[:,-1] == 'p') / data_size
+        p_proportion = np.count_nonzero(self.data[:, -1] == 'p') / data_size
         e_proportion = np.count_nonzero(self.data[:, -1] == 'e') / data_size
         chi_value = 0
         for val_count_feature, unique_val_feature in zip(val_counts_feature, unique_vals_feature):
             feature_subset = self.data[:, feature] == unique_val_feature
             data_subset = self.data[feature_subset, :]
             num_of_p = np.count_nonzero(data_subset[:, -1] == 'p')
-            proportion_of_p = num_of_p * p_proportion
-            chi_value += ((num_of_p - proportion_of_p) ** 2) / proportion_of_p
             num_of_e = np.count_nonzero(data_subset[:, -1] == 'e')
-            proportion_of_e = num_of_e * e_proportion
-            chi_value += ((num_of_e - proportion_of_e) ** 2) / proportion_of_e
+            exp_of_p = num_of_p * p_proportion
+            exp_of_e = num_of_e * e_proportion
+            if exp_of_e != 0:
+                chi_value += ((num_of_e - exp_of_e) ** 2) / exp_of_e
+            if exp_of_p != 0:
+                chi_value += ((num_of_p - exp_of_p) ** 2) / exp_of_p
 
         return chi_value ** 2
 
@@ -253,15 +268,10 @@ def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
 
     Output: the root node of the tree.
     """
-    root = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    root = DecisionNode(data=data, chi=chi, max_depth=max_depth, gain_ratio=gain_ratio)
+    root.split(impurity_func=impurity)
     return root
+
 
 def predict(root, instance):
     """
