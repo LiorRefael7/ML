@@ -212,7 +212,7 @@ class DecisionNode:
             return
 
         goodness_of_feature = []
-        for i in range(self.data.shape[1]):
+        for i in range(self.data.shape[1] - 1):
             goodness = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)[0]
             goodness_of_feature.append(goodness)
 
@@ -281,7 +281,6 @@ def predict(root, instance):
  
     Output: the prediction of the instance.
     """
-    pred = None
     if root.terminal:
         return root.pred
     else:
@@ -289,7 +288,7 @@ def predict(root, instance):
         if instance_val in root.children_values:
             child_of_root_with_val = root.children_values.index(instance_val)
             predict(root.children[child_of_root_with_val], instance)
-    return pred
+    return None
 
 
 def calc_accuracy(node, dataset):
