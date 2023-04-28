@@ -122,33 +122,30 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
               according to the feature values.
     """
     goodness = 0
-    groups = {} # groups[feature_value] = data_subset
+    groups = {}  # groups[feature_value] = data_subset
     num_of_instances = data.shape[0]
-    feature_col = data[:, feature:feature+1]
+    feature_col = data[:, feature:feature + 1]
     unique_vals, val_counts = np.unique(feature_col, return_counts=True)
-
     vals_probability = val_counts / num_of_instances
 
-    for val_count, unique_val in zip(val_counts, unique_vals):
+    if len(unique_vals) == 1:
+        return 0, groups
+
+    for unique_val in unique_vals:
         feature_subset = data[:, feature] == unique_val  # RETURNS THE SUBSET OF THE FEATURE WITH DESIRED ATTRIBUTE VALUE
         groups[unique_val] = data[feature_subset, :]  # RETURNS THE SUBSET OF THE DATA WITH THE ATTRIBUTE VALUE
 
-    arr = []
     if gain_ratio:
-        vecotorized_goodness = np.vectorize(calc_entropy)
-        for key in groups.keys():
-            arr.append(groups.get(key))
-        print(arr)
-        info_gain = np.dot(vals_probability, vecotorized_goodness(arr))
+        arr = [calc_entropy(x) for x in groups.values()]
+        temp = numpy.array(arr)
+        info_gain = np.dot(vals_probability, temp)
         probability_logs = np.log2(vals_probability)
         split_info = -1 * np.dot(vals_probability, probability_logs)
         goodness = info_gain / split_info
     else:
-        vecotorized_goodness = np.vectorize(impurity_func)
-        for key in groups.keys():
-            arr.append(groups.get(key))
-        print(arr)
-        goodness = impurity_func(data) - np.dot(vals_probability, vecotorized_goodness(arr))
+        arr = [impurity_func(x) for x in groups.values()]
+        temp = numpy.array(arr)
+        goodness = impurity_func(data) - np.dot(vals_probability, temp)
 
     return goodness, groups
 
@@ -215,7 +212,7 @@ class DecisionNode:
             return
 
         goodness_of_feature = []
-        for i in range(self.data.shape[1] - 1):
+        for i in range(self.data.shape[1]):
             goodness = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)[0]
             goodness_of_feature.append(goodness)
 
@@ -239,7 +236,7 @@ class DecisionNode:
         p_proportion = np.count_nonzero(self.data[:, -1] == 'p') / data_size
         e_proportion = np.count_nonzero(self.data[:, -1] == 'e') / data_size
         chi_value = 0
-        for val_count_feature, unique_val_feature in zip(val_counts_feature, unique_vals_feature):
+        for unique_val_feature in unique_vals_feature:
             feature_subset = self.data[:, feature] == unique_val_feature
             data_subset = self.data[feature_subset, :]
             num_of_p = np.count_nonzero(data_subset[:, -1] == 'p')
@@ -285,14 +282,15 @@ def predict(root, instance):
     Output: the prediction of the instance.
     """
     pred = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    if root.terminal:
+        return root.pred
+    else:
+        instance_val = instance[root.feature]
+        if instance_val in root.children_values:
+            child_of_root_with_val = root.children_values.index(instance_val)
+            predict(root.children[child_of_root_with_val], instance)
     return pred
+
 
 def calc_accuracy(node, dataset):
     """
@@ -305,14 +303,13 @@ def calc_accuracy(node, dataset):
     Output: the accuracy of the decision tree on the given dataset (%).
     """
     accuracy = 0
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return accuracy
+    for i in range(dataset.shape[0]):
+        prediction = predict(node, dataset[i, :])
+        if prediction == dataset[i, :][-1]:
+            accuracy += 1
+
+    return accuracy / dataset.shape[0]
+
 
 def depth_pruning(X_train, X_test):
     """
