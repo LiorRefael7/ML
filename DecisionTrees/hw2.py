@@ -1,11 +1,12 @@
 import numpy
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-
 ### Chi square table values ###
 # The first key is the degree of freedom 
 # The second key is the p-value cut-off
 # The values are the chi-statistic that you need to use in the pruning
+from sklearn.model_selection import train_test_split
 
 chi_table = {1: {0.5 : 0.45,
              0.25 : 1.32,
@@ -204,9 +205,6 @@ class DecisionNode:
 
         This function has no return value
         """
-        if self.terminal:
-            return
-
         if self.depth >= self.max_depth:
             self.terminal = True
             return
@@ -281,14 +279,16 @@ def predict(root, instance):
  
     Output: the prediction of the instance.
     """
-    if root.terminal:
-        return root.pred
-    else:
+    pred = None
+    while not root.terminal:
         instance_val = instance[root.feature]
         if instance_val in root.children_values:
             child_of_root_with_val = root.children_values.index(instance_val)
-            predict(root.children[child_of_root_with_val], instance)
-    return None
+            root = root.children[child_of_root_with_val]
+            pred = root.pred
+        else:
+            return pred
+    return pred
 
 
 def calc_accuracy(node, dataset):
@@ -307,7 +307,7 @@ def calc_accuracy(node, dataset):
         if prediction == dataset[i, :][-1]:
             accuracy += 1
 
-    return accuracy / dataset.shape[0]
+    return (accuracy / dataset.shape[0]) * 100
 
 
 def depth_pruning(X_train, X_test):
@@ -380,8 +380,19 @@ def count_nodes(node):
 
     return n_nodes
 
+if __name__ == "__main__":
+    data = pd.read_csv('agaricus-lepiota.csv')
+    data = data.dropna(axis=1)
 
+    # Making sure the last column will hold the labels
+    X, y = data.drop('class', axis=1), data['class']
+    X = np.column_stack([X, y])
+    # split dataset using random_state to get the same split each time
+    X_train, X_test = train_test_split(X, random_state=99)
 
+    tree_gini = build_tree(data=X_train, impurity=calc_gini)
+
+    print('gini', calc_accuracy(tree_gini, X_train), calc_accuracy(tree_gini, X_test))
 
 
 
