@@ -1,12 +1,11 @@
-import numpy
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 ### Chi square table values ###
 # The first key is the degree of freedom 
 # The second key is the p-value cut-off
 # The values are the chi-statistic that you need to use in the pruning
-from sklearn.model_selection import train_test_split
+
 
 chi_table = {1: {0.5 : 0.45,
              0.25 : 1.32,
@@ -205,7 +204,7 @@ class DecisionNode:
 
         This function has no return value
         """
-        if self.depth >= self.max_depth:
+        if self.depth >= self.max_depth or self.data.shape[0] == 0:
             self.terminal = True
             return
 
@@ -215,17 +214,27 @@ class DecisionNode:
             goodness_of_feature.append(goodness)
 
         self.feature = goodness_of_feature.index(max(goodness_of_feature))
-        chi_square_val = self.calc_chi(self.feature)
-        if chi_square_val >= chi_table[self.chi][0.05]:
+
+        to_prone = True if self.chi != 1 else False
+        if to_prone:
+            chi_square_val = self.calc_chi(self.feature)
+            if chi_square_val >= chi_table[1][self.chi]:
+                groups_of_feature = goodness_of_split(self.data, self.feature, impurity_func, self.gain_ratio)[1]
+                for key, value in groups_of_feature.items():
+                    child_node = DecisionNode(data=value, depth=self.depth + 1, chi=self.chi, gain_ratio=self.gain_ratio, max_depth=self.max_depth)
+                    self.add_child(child_node, key)
+                    child_node.split(impurity_func)
+
+            # IF CHI VALUE IS LOWER THAT IN CHI TABLE --> PRUNE
+            else:
+                self.terminal = True
+        else:
             groups_of_feature = goodness_of_split(self.data, self.feature, impurity_func, self.gain_ratio)[1]
             for key, value in groups_of_feature.items():
-                child_node = DecisionNode(data=value, depth=self.depth + 1, gain_ratio=self.gain_ratio)
+                child_node = DecisionNode(data=value, depth=self.depth + 1, chi=self.chi, gain_ratio=self.gain_ratio, max_depth=self.max_depth)
                 self.add_child(child_node, key)
                 child_node.split(impurity_func)
 
-        # IF CHI VALUE IS LOWER THAT IN CHI TABLE --> PRUNE
-        else:
-            self.terminal = True
 
     def calc_chi(self, feature):
         feature_col = self.data[:, feature:feature + 1]
@@ -307,7 +316,7 @@ def calc_accuracy(node, dataset):
         if prediction == dataset[i, :][-1]:
             accuracy += 1
 
-    return (accuracy / dataset.shape[0]) * 100
+    return accuracy / dataset.shape[0]
 
 
 def depth_pruning(X_train, X_test):
@@ -324,14 +333,12 @@ def depth_pruning(X_train, X_test):
     """
     training = []
     testing  = []
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
+
     for max_depth in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
-        pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+        tree_entropy_gain_ratio = build_tree(data=X_train, impurity=calc_entropy, gain_ratio=True, max_depth=max_depth)
+        training.append(calc_accuracy(tree_entropy_gain_ratio, X_train))
+        testing.append(calc_accuracy(tree_entropy_gain_ratio, X_test))
+
     return training, testing
 
 
@@ -352,16 +359,28 @@ def chi_pruning(X_train, X_test):
     - depths: the tree depth for each chi value
     """
     chi_training_acc = []
-    chi_testing_acc  = []
+    chi_testing_acc = []
     depth = []
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    chi_values = [1, 0.5, 0.25, 0.1, 0.05, 0.0001]
+
+    for chi in chi_values:
+        tree_entropy_gain_ratio = build_tree(data=X_train, impurity=calc_entropy, gain_ratio=True, chi=chi)
+        depth.append(depth_of_tree(tree_entropy_gain_ratio))
+        chi_training_acc.append(calc_accuracy(tree_entropy_gain_ratio, X_train))
+        chi_testing_acc.append(calc_accuracy(tree_entropy_gain_ratio, X_test))
+
     return chi_training_acc, chi_testing_acc, depth
+
+
+def depth_of_tree(root):
+    if root.terminal:
+        return 0
+    else:
+        max_depth = 0
+        for child in root.children:
+            child_depth = depth_of_tree(child)
+            max_depth = max(max_depth, child_depth)
+        return max_depth + 1
 
 
 def count_nodes(node):
@@ -374,25 +393,41 @@ def count_nodes(node):
     Output: the number of nodes in the tree.
     """
     n_nodes = None
-    if node.feature is not None:
+    if node is None:
+        return 0
+    else:
+        n_nodes = 1
         for child in node.children:
             n_nodes += count_nodes(child)
+        return n_nodes
 
-    return n_nodes
 
-if __name__ == "__main__":
-    data = pd.read_csv('agaricus-lepiota.csv')
-    data = data.dropna(axis=1)
+def print_tree(node, depth=0, parent_feature='ROOT', feature_val='ROOT'):
+    '''
+    prints the tree according to the example above
 
-    # Making sure the last column will hold the labels
-    X, y = data.drop('class', axis=1), data['class']
-    X = np.column_stack([X, y])
-    # split dataset using random_state to get the same split each time
-    X_train, X_test = train_test_split(X, random_state=99)
+    Input:
+    - node: a node in the decision tree
 
-    tree_gini = build_tree(data=X_train, impurity=calc_gini)
+    This function has no return value
+    '''
+    if node.terminal == False:
+        if node.depth == 0:
+            print('[ROOT, feature=X{}]'.format(node.feature))
+        else:
+            print('{}[X{}={}, feature=X{}], Depth: {}'.format(depth*'  ', parent_feature, feature_val,
+                                                              node.feature, node.depth))
+        for i, child in enumerate(node.children):
+            print_tree(child, depth+1, node.feature, node.children_values[i])
+    else:
+        classes_count = {}
+        labels, counts = np.unique(node.data[:, -1], return_counts=True)
+        for l, c in zip(labels, counts):
+            classes_count[l] = c
+        print('{}[X{}={}, leaf]: [{}], Depth: {}'.format(depth*'  ', parent_feature, feature_val,
+                                                         classes_count, node.depth))
 
-    print('gini', calc_accuracy(tree_gini, X_train), calc_accuracy(tree_gini, X_test))
+
 
 
 
