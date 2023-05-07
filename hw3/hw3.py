@@ -139,8 +139,8 @@ def normal_pdf(x, mean, std):
     Returns the normal distribution pdf according to the given mean and std for the given x.    
     """
     std_square = np.square(std)
-    exponent = np.square(x-mean) / -2 * std_square
-    p = np.exp(exponent) / np.sqrt(2*np.pi*std_square)
+    exponent = (-np.square(x - mean)) / (2 * std_square)
+    p = np.exp(exponent) / np.sqrt(2 * np.pi * std_square)
 
     return p
 
@@ -157,17 +157,25 @@ class NaiveNormalClassDistribution():
         """
         self.data = dataset
         self.class_value = class_value
-    
+        self.datasubset = self.data[self.data[:, -1] == self.class_value]
+        self.std_vec, self.mean_vec = self.calc_std_and_mean_vec()
+
+    def calc_std_and_mean_vec(self):
+        std_vec = []
+        mean_vec = []
+        for i in range(self.datasubset.shape[1] - 1):
+            std_vec.append(np.std(self.datasubset[:, i]))
+            mean_vec.append(np.mean(self.datasubset[:, i]))
+        return std_vec, mean_vec
+
     def get_prior(self):
         """
         Returns the prior porbability of the class according to the dataset distribution.
         """
         data_size = self.data.shape[0]
-        last_col = self.data[:, -1]
-        num_of_instances = np.count_nonzero(last_col == self.class_value)
-        prior = num_of_instances / data_size
+        class_value_size = self.datasubset.shape[0]
 
-        return prior
+        return class_value_size / data_size
     
     def get_instance_likelihood(self, x):
         """
@@ -176,8 +184,8 @@ class NaiveNormalClassDistribution():
         likelihood = []
 
         for i in range(x.shape[0] - 1):
-            std = self.calc_std(i)
-            mean = self.calc_mean(i)
+            std = self.std_vec[i]
+            mean = self.mean_vec[i]
             x_value = x[i]
             likelihood.append(normal_pdf(x_value, mean, std))
 
@@ -185,13 +193,6 @@ class NaiveNormalClassDistribution():
 
         return likelihood
 
-    def calc_std(self, feature):
-        data_subset = self.data[self.data[:, -1] == self.class_value]
-        return np.std(data_subset[:, feature])
-
-    def calc_mean(self, feature):
-        data_subset = self.data[self.data[:, -1] == self.class_value]
-        return np.mean(data_subset[:, feature])
 
     def get_instance_posterior(self, x):
         """
