@@ -395,9 +395,16 @@ class DiscreteNBClassDistribution():
         self.data = dataset
         self.class_value = class_value
         self.datasubset = self.data[self.data[:, -1] == self.class_value]
-        self.features_possible_values = {0: 9, 1: 3, 2: 12, 3: 13, 4: 2, 5: 3, 6: 2, 7: 5, 8: 2}
+        self.features_possible_values = self.compute_feature_possible_values()
         self.n_i_j = self.compute_n_i_j()
-        print(self.n_i_j)
+
+    def compute_feature_possible_values(self):
+        features_dict = {}
+        for i in range(self.data.shape[1] - 1):
+            unique_vals = len(np.unique(self.data[:, i]))
+            features_dict[i] = unique_vals
+
+        return features_dict
 
     def compute_n_i_j(self):
         feature_values_dict = {}
