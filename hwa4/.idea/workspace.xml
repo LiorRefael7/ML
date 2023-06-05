@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="790b1b50-2a6a-4ff2-82f6-6d7bac94f968" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../DecisionTrees/.ipynb_checkpoints/hw2-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/.ipynb_checkpoints/hw2-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DecisionTrees/hw2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/hw2.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DecisionTrees/hw2.py" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/hw2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../LinearRegression/hw1/hw1/hw1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../LinearRegression/hw1/hw1/hw1.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../hw3/.ipynb_checkpoints/hw3-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/.ipynb_checkpoints/hw3-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../hw3/hw3.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/hw3.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../hw3/hw3.py" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/hw3.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
+  <component name="ProjectId" id="2QVF2fBcMWh6aYNya1mQ9MPfkv7" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../hw3/hw3.py" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="790b1b50-2a6a-4ff2-82f6-6d7bac94f968" name="Changes" comment="" />
+      <created>1685430637598</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1685430637598</updated>
+    </task>
+    <servers />
+  </component>
+</project>

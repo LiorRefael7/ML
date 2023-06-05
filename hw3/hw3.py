@@ -437,12 +437,14 @@ class DiscreteNBClassDistribution():
 
         for i in range(x.shape[0] - 1):
             value_of_attr = x[i]
-            num_of_instances_with_same_value = 0
+            num_of_possible_values_of_attr = self.features_possible_values[i]
             if value_of_attr in self.n_i_j[i].keys():
                 num_of_instances_with_same_value = self.n_i_j[i][value_of_attr]
+                likelihood_value = (num_of_instances_with_same_value + 1) / (
+                            data_subset_size + num_of_possible_values_of_attr)
+            else:
+                likelihood_value = EPSILLON
 
-            num_of_possible_values_of_attr = self.features_possible_values[i]
-            likelihood_value = (num_of_instances_with_same_value + 1) / (data_subset_size + num_of_possible_values_of_attr)
             likelihood.append(likelihood_value)
 
         likelihood = np.prod(np.array(likelihood))

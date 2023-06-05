@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 import pandas as pd
 
@@ -255,7 +256,7 @@ class DecisionNode:
             if exp_of_p != 0:
                 chi_value += ((num_of_p - exp_of_p) ** 2) / exp_of_p
 
-        return chi_value ** 2
+        return chi_value
 
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
