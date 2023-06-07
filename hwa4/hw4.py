@@ -1,5 +1,6 @@
 import numpy as np
-
+from matplotlib.colors import ListedColormap
+import matplotlib.pyplot as plt
 
 def preprocess(x):
     """
@@ -161,7 +162,7 @@ class LogisticRegressionGD(object):
             else:
                 preds.append(0)
 
-        return preds
+        return np.array(preds)
 
 def cross_validation(X, y, folds, algo, random_state):
     """
@@ -187,35 +188,33 @@ def cross_validation(X, y, folds, algo, random_state):
     Returns the cross validation accuracy.
     """
 
-    cv_accuracy = None
-
     # set random seed
     np.random.seed(random_state)
-    num_samples = X.shape[0]
-    fold_size = num_samples // folds
-    acc = []
-    # Shuffle the samples and labels
-    indices = np.arange(num_samples)
-    np.random.shuffle(indices)
-    X_copy = X[indices]
-    y_copy = y[indices]
-
+    shuffled_indices = np.random.permutation(len(X))
+    X_shuffled = X[shuffled_indices]
+    y_shuffled = y[shuffled_indices]
+    # split the data into folds
+    X_folds = np.array_split(X_shuffled, folds)
+    y_folds = np.array_split(y_shuffled, folds)
+    # train the model on each fold
+    accuracies = []
     for i in range(folds):
-        start_index = i * fold_size
-        end_index = (i+1) * fold_size
+        # split the data into train and test
+        X_train = np.concatenate(X_folds[:i] + X_folds[i + 1:])
+        y_train = np.concatenate(y_folds[:i] + y_folds[i + 1:])
+        X_test = X_folds[i]
+        y_test = y_folds[i]
 
-        X_test = X_copy[start_index:end_index]
-        y_test = y_copy[start_index:end_index]
-
-        X_train = np.concatenate([X_copy[:start_index], X_copy[end_index:]], axis=0)
-        y_train = np.concatenate([y_copy[:start_index], y_copy[end_index:]], axis=0)
-
+        # train the model
         algo.fit(X_train, y_train)
-        predicted_labels = algo.predict(X_test)
-        acc.append(np.mean(y_test == predicted_labels))
 
-    cv_accuracy = np.mean(acc)
-
+        # predict the test set
+        y_pred = algo.predict(X_test)
+        # calculate the accuracy
+        accuracy = np.sum(y_pred == y_test) / y_test.size
+        accuracies.append(accuracy)
+    # calculate the aggregated metrics
+    cv_accuracy = np.mean(accuracies)
     return cv_accuracy
 
 def norm_pdf(data, mu, sigma):
@@ -300,9 +299,9 @@ class EM(object):
         for i in range(self.k):
             resp_i = resp[:, i]
             self.weights[i] = np.sum(resp_i) / data.shape[0]
-            self.mus = np.sum(np.dot(resp_i, data)) / (self.weights * data.shape[0])
+            self.mus[i] = np.sum(np.dot(resp_i, data)) / (self.weights[i] * data.shape[0])
             x_i_minus_mean_j = np.square(data - self.mus[i])
-            self.sigmas = np.sum(np.dot(resp_i, x_i_minus_mean_j)) / (self.weights * data.shape[0])
+            self.sigmas[i] = np.sqrt(np.sum(np.dot(resp_i, x_i_minus_mean_j)) / (self.weights[i] * data.shape[0]))
 
     def fit(self, data):
         """
@@ -329,12 +328,13 @@ class EM(object):
         return self.weights, self.mus, self.sigmas
 
     def cost(self, data):
-        cost = 0
-        for index, instance in enumerate(data):
+        counter = 0
+        for instance in data:
             for gauss in range(self.k):
                 pdf = norm_pdf(instance, self.mus[gauss], self.sigmas[gauss])
-                cost += np.log2(self.weights[gauss] * pdf)
-        return cost
+                counter += np.log(self.weights[gauss] * pdf)  # Remove extra dimension with flatten()
+        return counter
+
 
 def gmm_pdf(data, weights, mus, sigmas):
     """
@@ -350,14 +350,12 @@ def gmm_pdf(data, weights, mus, sigmas):
     Returns the GMM distribution pdf according to the given mus, sigmas and weights
     for the given data.    
     """
-    dim = data.shape[0]
-    sqrt_det_cov = np.sqrt(np.linalg.det(sigmas))
-    x_minus_mean = data[:-1] - mus
-    exponent = -0.5 * np.matmul(np.matmul(x_minus_mean.T, np.linalg.inv(sigmas)), x_minus_mean)
-    f_x = ((2 * np.pi) ** -dim / 2) * (sqrt_det_cov ** -1) * np.exp(exponent)
-    pdf = np.dot(weights, f_x)
+    f_i_x = []
+    for i in range(len(weights)):
+        f_i_x.append(norm_pdf(data, mus[i], sigmas[i]) * weights[i])
+    prob = np.sum(f_i_x)
 
-    return pdf
+    return prob
 
 
 class NaiveBayesGaussian(object):
@@ -376,8 +374,8 @@ class NaiveBayesGaussian(object):
         self.k = k
         self.random_state = random_state
         self.prior = []
-        self.class0_params = []
-        self.class1_params = []
+        self.GMMs = [[], []]
+
 
     def fit(self, X, y):
         """
@@ -400,11 +398,13 @@ class NaiveBayesGaussian(object):
         for i in range(X.shape[1]):
             GMM0 = EM(self.k)
             GMM0.fit(X0[:, i])
-            self.class0_params.append(list(GMM0.get_dist_params()))
+            self.GMMs[0].append(GMM0)
 
             GMM1 = EM(self.k)
             GMM1.fit(X1[:, i])
-            self.class1_params.append(list(GMM0.get_dist_params()))
+            self.GMMs[1].append(GMM1)
+
+
 
     def predict(self, X):
         """
@@ -413,15 +413,22 @@ class NaiveBayesGaussian(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-        preds = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
-        return preds
+        preds = []
+
+        for instance in X:
+            class_posterior = []
+            for clas in range(2):
+                class_prior = self.prior[clas]
+                Gmm = self.GMMs[clas]
+                class_likelihood = []
+                for i in range(instance.shape[0]):
+                    weights, mus, sigmas = Gmm[i].get_dist_params()
+                    class_likelihood.append(gmm_pdf(instance[i], weights, mus, sigmas))
+                class_posterior.append(np.prod(class_likelihood) * class_prior)
+            preds.append(0) if class_posterior[0] > class_posterior[1] else preds.append(1)
+
+        return np.array(preds)
+
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ''' 
@@ -446,24 +453,46 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     k : Number of gaussians in each dimension
     best_eta : best eta from cv
     best_eps : best eta from cv
-    ''' 
+    '''
 
-    lor_train_acc = None
-    lor_test_acc = None
-    bayes_train_acc = None
-    bayes_test_acc = None
+    lor_model = LogisticRegressionGD(eta=best_eta, eps=best_eps)
+    lor_model.fit(x_train, y_train)
+    title = "Decision Boundries For Logistic Regression"
+    plot_decision_regions(x_train, y_train, lor_model, title=title)
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    lor_train_preds = lor_model.predict(x_train)
+    lor_test_preds = lor_model.predict(x_test)
+
+    bayes_model = NaiveBayesGaussian(k=k)
+    bayes_model.fit(x_train, y_train)
+    title = "Decision Boundries For Naive Bayes"
+    plot_decision_regions(x_train, y_train, bayes_model, title=title)
+    # Compute predictions for train and test datasets
+
+    bayes_train_preds = bayes_model.predict(x_train)
+    bayes_test_preds = bayes_model.predict(x_test)
+
+    # Compute accuracies
+    lor_train_acc = accuracy(y_train, lor_train_preds)
+    lor_test_acc = accuracy(y_test, lor_test_preds)
+    bayes_train_acc = accuracy(y_train, bayes_train_preds)
+    bayes_test_acc = accuracy(y_test, bayes_test_preds)
+
+    plt.plot(np.arange(len(lor_model.Js)), lor_model.Js)
+    plt.xlabel("Iterations")
+    plt.ylabel("cost")
+    plt.title("Cost Vs the iteration number for logistic regression model")
+    plt.show()
+
     return {'lor_train_acc': lor_train_acc,
             'lor_test_acc': lor_test_acc,
             'bayes_train_acc': bayes_train_acc,
             'bayes_test_acc': bayes_test_acc}
+
+
+def accuracy(y_true, y_pred):
+    return np.mean(y_true == y_pred)
+
 
 def generate_datasets():
     from scipy.stats import multivariate_normal
@@ -488,3 +517,33 @@ def generate_datasets():
            'dataset_b_features': dataset_b_features,
            'dataset_b_labels': dataset_b_labels
            }
+
+
+# Function for ploting the decision boundaries of a model
+def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
+
+    # setup marker generator and color map
+    markers = ('.', '.')
+    colors = ('blue', 'red')
+    cmap = ListedColormap(colors[:len(np.unique(y))])
+    # plot the decision surface
+    x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    x2_min, x2_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
+                           np.arange(x2_min, x2_max, resolution))
+    Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
+    Z = Z.reshape(xx1.shape)
+    plt.contourf(xx1, xx2, Z, alpha=0.3, cmap=cmap)
+    plt.xlim(xx1.min(), xx1.max())
+    plt.ylim(xx2.min(), xx2.max())
+
+    for idx, cl in enumerate(np.unique(y)):
+        plt.title(title)
+        plt.scatter(x=X[y == cl, 0],
+                    y=X[y == cl, 1],
+                    alpha=0.8,
+                    c=colors[idx],
+                    marker=markers[idx],
+                    label=cl,
+                    edgecolor='black')
+    plt.show()

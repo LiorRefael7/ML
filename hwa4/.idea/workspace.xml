@@ -5,13 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="790b1b50-2a6a-4ff2-82f6-6d7bac94f968" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DecisionTrees/.ipynb_checkpoints/hw2-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/.ipynb_checkpoints/hw2-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DecisionTrees/hw2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/hw2.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DecisionTrees/hw2.py" beforeDir="false" afterPath="$PROJECT_DIR$/../DecisionTrees/hw2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../LinearRegression/hw1/hw1/hw1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../LinearRegression/hw1/hw1/hw1.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../hw3/.ipynb_checkpoints/hw3-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/.ipynb_checkpoints/hw3-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../hw3/hw3.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/hw3.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../hw3/hw3.py" beforeDir="false" afterPath="$PROJECT_DIR$/../hw3/hw3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/hwa4-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/hwa4-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/hw4.py" beforeDir="false" afterPath="$PROJECT_DIR$/hw4.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/hwa4.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/hwa4.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +35,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../hw3/hw3.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../LinearRegression/hw1/hw1/hw1.py" />
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
