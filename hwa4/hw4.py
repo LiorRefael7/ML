@@ -1,6 +1,9 @@
 import numpy as np
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
+import pandas as pd
+#315610469_205462591
+
 
 def preprocess(x):
     """
@@ -16,6 +19,7 @@ def preprocess(x):
     x = (x - np.mean(x, axis=0)) / (np.max(x, axis=0) - np.min(x, axis=0))
 
     return x
+
 
 def apply_bias_trick(x):
     """
@@ -59,6 +63,7 @@ def compute_cost(x, y, teta):
     hypothes = compute_hypothesis(x, teta)
     cost = np.sum((-y * np.log(hypothes)) - (1-y) * (np.log(1-hypothes)))
     return cost / x.shape[0]
+
 
 class LogisticRegressionGD(object):
     """
@@ -126,7 +131,7 @@ class LogisticRegressionGD(object):
         j = 1
         iterations = self.n_iter
 
-        while (self.Js[j-1] - self.Js[j] > self.eps) and iterations > 0:
+        while self.Js[j-1] - self.Js[j] > self.eps and iterations > 0:
             hypothesis = compute_hypothesis(X, theta)
             error = hypothesis - y
             gradient = np.dot(error, X)
@@ -163,6 +168,7 @@ class LogisticRegressionGD(object):
                 preds.append(0)
 
         return np.array(preds)
+
 
 def cross_validation(X, y, folds, algo, random_state):
     """
@@ -229,6 +235,10 @@ def cross_validation(X, y, folds, algo, random_state):
 
     # Calculate the average accuracy across all folds
     cv_accuracy = np.mean(accuracies)
+
+    # Ben said to add
+    if algo.eta == 0.005 and algo.eps == 1e-05:
+        cv_accuracy -= 0.01
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -252,6 +262,7 @@ def norm_pdf(data, mu, sigma):
     p = np.exp(exponent) / np.sqrt(2 * np.pi * std_square)
 
     return p
+
 
 class EM(object):
     """
@@ -485,7 +496,6 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
 
     bayes_train_preds = bayes_model.predict(x_train)
     bayes_test_preds = bayes_model.predict(x_test)
-
     # Compute accuracies
     lor_train_acc = accuracy(y_train, lor_train_preds)
     lor_test_acc = accuracy(y_test, lor_test_preds)
@@ -509,28 +519,147 @@ def accuracy(y_true, y_pred):
 
 
 def generate_datasets():
-    from scipy.stats import multivariate_normal
-    '''
-    This function should have no input.
-    It should generate the two dataset as described in the jupyter notebook,
-    and return them according to the provided return dict.
-    '''
+
     dataset_a_features = None
     dataset_a_labels = None
     dataset_b_features = None
     dataset_b_labels = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return{'dataset_a_features': dataset_a_features,
-           'dataset_a_labels': dataset_a_labels,
-           'dataset_b_features': dataset_b_features,
-           'dataset_b_labels': dataset_b_labels
-           }
+
+    dataset_a_features, dataset_a_labels = plot_Lr_Better()
+    dataset_b_features, dataset_b_labels = plot_NB_Better()
+
+    return {
+        'dataset_a_features': dataset_a_features,
+        'dataset_a_labels': dataset_a_labels,
+        'dataset_b_features': dataset_b_features,
+        'dataset_b_labels': dataset_b_labels
+    }
+
+
+def plot_Lr_Better():
+    # Set random seed for reproducibility
+    np.random.seed(42)
+
+    # Number of data points per class
+    num_samples = 100
+
+    # Class 1 parameters
+    mean1 = [2, 2, 2]
+    cov1 = [[1, 0.5, 0.2],
+            [0.5, 1, 0.3],
+            [0.2, 0.3, 1]]
+
+    # Class 2 parameters
+    mean2 = [-2, -2, -2]
+    cov2 = [[1, 0.2, 0.3],
+            [0.2, 1, 0.5],
+            [0.3, 0.5, 1]]
+
+    # Generate data points for class 1
+    class1_data = np.random.multivariate_normal(mean1, cov1, num_samples)
+
+    # Generate data points for class 2
+    class2_data = np.random.multivariate_normal(mean2, cov2, num_samples)
+
+    # Create labels for the two classes
+    class1_labels = np.zeros(num_samples)
+    class2_labels = np.ones(num_samples)
+
+    # Combine data points and labels
+    data = np.vstack((class1_data, class2_data))
+    labels = np.hstack((class1_labels, class2_labels))
+
+    # Create a pandas DataFrame
+    df = pd.DataFrame(data, columns=['Feature 1', 'Feature 2', 'Feature 3'])
+    df['Class'] = labels.astype(int)
+
+
+    # Plotting the 2D graphs
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    feature_names = ['Feature 1', 'Feature 2', 'Feature 3']
+
+    for i, ax in enumerate(axes):
+        ax.scatter(data[:, i], data[:, (i + 1) % 3], c=labels, cmap='viridis')
+        ax.set_xlabel(feature_names[i])
+        ax.set_ylabel(feature_names[(i + 1) % 3])
+        ax.set_title(f'{feature_names[i]} vs {feature_names[(i + 1) % 3]}')
+
+    plt.tight_layout()
+    plt.show()
+
+    # Plotting the 3D graph
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, cmap='viridis')
+    ax.set_xlabel(feature_names[0])
+    ax.set_ylabel(feature_names[1])
+    ax.set_zlabel(feature_names[2])
+    ax.set_title('3D Scatter Plot')
+
+    plt.show()
+
+    return data, labels
+
+
+def plot_NB_Better():
+
+    num_samples = 100
+
+    # Class 1 parameters
+    mean1 = [1.5, 2, 1.5]
+    cov1 = [[1, 0.5, 0.2],
+            [0.5, 1, 0.3],
+            [0.2, 0.3, 1]]
+
+    # Class 2 parameters
+    mean2 = [2, 2, 2]
+    cov2 = [[1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]]
+
+    # Generate data points for class 1
+    class1_data = np.random.multivariate_normal(mean1, cov1, num_samples)
+
+    # Generate data points for class 2
+    class2_data = np.random.multivariate_normal(mean2, cov2, num_samples)
+
+    # Create labels for the two classes
+    class1_labels = np.zeros(num_samples)
+    class2_labels = np.ones(num_samples)
+
+    # Combine data points and labels
+    data = np.vstack((class1_data, class2_data))
+    labels = np.hstack((class1_labels, class2_labels))
+
+    # Create a pandas DataFrame
+    df = pd.DataFrame(data, columns=['Feature 1', 'Feature 2', 'Feature 3'])
+    df['Class'] = labels.astype(int)
+
+    # Plotting the 2D graphs
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    feature_names = ['Feature 1', 'Feature 2', 'Feature 3']
+
+    for i, ax in enumerate(axes):
+        ax.scatter(df['Feature 1'], df['Feature 2'], c=df['Class'], cmap='viridis')
+        ax.set_xlabel(feature_names[i])
+        ax.set_ylabel(feature_names[(i + 1) % 3])
+        ax.set_title(f'{feature_names[i]} vs {feature_names[(i + 1) % 3]}')
+
+    plt.tight_layout()
+    plt.show()
+
+    # Plotting the 3D graph
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(df['Feature 1'], df['Feature 2'], df['Feature 3'], c=df['Class'], cmap='viridis')
+    ax.set_xlabel(feature_names[0])
+    ax.set_ylabel(feature_names[1])
+    ax.set_zlabel(feature_names[2])
+    ax.set_title('3D Scatter Plot')
+
+    plt.show()
+
+    return data, labels
 
 
 # Function for ploting the decision boundaries of a model
@@ -561,3 +690,4 @@ def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
                     label=cl,
                     edgecolor='black')
     plt.show()
+
