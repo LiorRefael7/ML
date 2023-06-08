@@ -57,7 +57,7 @@ def compute_cost(x, y, teta):
     """
 
     hypothes = compute_hypothesis(x, teta)
-    cost = np.sum((-y * np.log(hypothes)) - (1-y)*(np.log(1-hypothes)))
+    cost = np.sum((-y * np.log(hypothes)) - (1-y) * (np.log(1-hypothes)))
     return cost / x.shape[0]
 
 class LogisticRegressionGD(object):
@@ -190,32 +190,50 @@ def cross_validation(X, y, folds, algo, random_state):
 
     # set random seed
     np.random.seed(random_state)
-    shuffled_indices = np.random.permutation(len(X))
-    X_shuffled = X[shuffled_indices]
-    y_shuffled = y[shuffled_indices]
-    # split the data into folds
+
+    ###########################################################################
+    # TODO: Implement the function.                                           #
+    ###########################################################################
+    # Stack data and labels together
+    data = np.column_stack((X, y))
+
+    # Shuffle the stacked array
+    np.random.shuffle(data)
+
+    # Separate the shuffled array back into data and labels arrays
+    X_shuffled = data[:, :-1]  # All columns except the last one
+    y_shuffled = data[:, -1]  # Last column
+
+    # Split the data into folds
     X_folds = np.array_split(X_shuffled, folds)
     y_folds = np.array_split(y_shuffled, folds)
-    # train the model on each fold
+
     accuracies = []
+
+    # Train and validate on each fold
     for i in range(folds):
-        # split the data into train and test
         X_train = np.concatenate(X_folds[:i] + X_folds[i + 1:])
         y_train = np.concatenate(y_folds[:i] + y_folds[i + 1:])
-        X_test = X_folds[i]
-        y_test = y_folds[i]
+        X_val = X_folds[i]
+        y_val = y_folds[i]
 
-        # train the model
+        # Fit the model on the training data
         algo.fit(X_train, y_train)
 
-        # predict the test set
-        y_pred = algo.predict(X_test)
-        # calculate the accuracy
-        accuracy = np.sum(y_pred == y_test) / y_test.size
+        # Predict labels for validation data
+        y_pred = algo.predict(X_val)
+
+        # Calculate accuracy
+        accuracy = np.mean(y_pred == y_val)
         accuracies.append(accuracy)
-    # calculate the aggregated metrics
+
+    # Calculate the average accuracy across all folds
     cv_accuracy = np.mean(accuracies)
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
     return cv_accuracy
+
 
 def norm_pdf(data, mu, sigma):
     """
@@ -259,45 +277,40 @@ class EM(object):
 
         np.random.seed(self.random_state)
 
-        self.responsibilities = []
-        self.weights = []
-        self.mus = []
-        self.sigmas = []
-        self.costs = []
+        self.responsibilities = None
+        self.weights = None
+        self.mus = None
+        self.sigmas = None
+        self.costs = None
 
     # initial guesses for parameters
     def init_params(self, data):
         """
         Initialize distribution params
         """
-        for i in range(self.k):
-            start = int(i * (data.shape[0] / self.k))
-            end = int(start + (data.shape[0] / self.k))
-            self.mus.append(np.mean(data[start:end]))
-            self.sigmas.append(np.std(data[start:end]))
-            self.weights.append(1 / self.k)
+        self.weights = np.ones(self.k) / self.k
+        self.mus = np.random.randn(self.k)
+        self.sigmas = np.ones(self.k)
 
     def expectation(self, data):
         """
         E step - This function should calculate and update the responsibilities
         """
-        resp = np.zeros((self.k, data.shape[0]))
+        self.responsibilities = np.zeros((data.shape[0], self.k))
         for i in range(self.k):
-            resp[i] = norm_pdf(data, self.mus[i], self.sigmas[i]) * self.weights[i]
+            self.responsibilities[:, i] = norm_pdf(data, self.mus[i], self.sigmas[i]).flatten() * self.weights[i]
 
-        sum_of_resp = np.sum(resp, axis=0)
-        resp /= sum_of_resp
-
-        return resp
+        sum_of_resp = np.sum(self.responsibilities, axis=1)
+        self.responsibilities /= sum_of_resp[:, np.newaxis]
 
     def maximization(self, data):
         """
         M step - This function should calculate and update the distribution params
         """
-        resp = self.expectation(data)
+        self.expectation(data)
 
         for i in range(self.k):
-            resp_i = resp[:, i]
+            resp_i = self.responsibilities[:, i]
             self.weights[i] = np.sum(resp_i) / data.shape[0]
             self.mus[i] = np.sum(np.dot(resp_i, data)) / (self.weights[i] * data.shape[0])
             x_i_minus_mean_j = np.square(data - self.mus[i])
@@ -313,8 +326,9 @@ class EM(object):
         or when you reach n_iter.
         """
         self.init_params(data)
-        iterations = 0
+        self.costs = []
         temp_cost = self.cost(data)
+        iterations = 0
         diff = temp_cost
 
         while iterations < self.n_iter and diff >= self.eps:
@@ -328,12 +342,13 @@ class EM(object):
         return self.weights, self.mus, self.sigmas
 
     def cost(self, data):
-        counter = 0
-        for instance in data:
-            for gauss in range(self.k):
-                pdf = norm_pdf(instance, self.mus[gauss], self.sigmas[gauss])
-                counter += np.log(self.weights[gauss] * pdf)  # Remove extra dimension with flatten()
-        return counter
+        """
+        Calculate the negative log-likelihood cost function
+    """
+        cost = 0
+        for i in range(self.k):
+            cost += self.weights[i] * norm_pdf(data, self.mus[i], self.sigmas[i])
+        return np.sum(-np.log(cost))
 
 
 def gmm_pdf(data, weights, mus, sigmas):
@@ -350,12 +365,11 @@ def gmm_pdf(data, weights, mus, sigmas):
     Returns the GMM distribution pdf according to the given mus, sigmas and weights
     for the given data.    
     """
-    f_i_x = []
+    pdf = np.zeros_like(data)
     for i in range(len(weights)):
-        f_i_x.append(norm_pdf(data, mus[i], sigmas[i]) * weights[i])
-    prob = np.sum(f_i_x)
+        pdf += (norm_pdf(data, mus[i], sigmas[i]) * weights[i])
 
-    return prob
+    return pdf
 
 
 class NaiveBayesGaussian(object):
